@@ -80,13 +80,7 @@ int FADE = 50;
 int left[7];
 int right[7];
 
-void controlLoop(); // see control_* include
-void ShowFrame();
-#define ledLoop ShowFrame
-#define DELAY_DEFAULT   600 // Starting game speed (delay ms between frames)
-#define DELAY_MIN       100 // Max game speed
-#include <LEDSnakeGame.h>
-
+void setupSnake(); // defined in LEDSnakeGame.h
 
 #if defined(CORE_TEENSY)
 #ifdef TEENSY4
@@ -97,6 +91,11 @@ void ShowFrame();
 #else
 #include "control_esp.h" // ESP32/ESP8266 - E1.31 and audio from WLED sender
 #endif
+
+void controlLoop(); // see control_* include
+void ShowFrame();
+#define ledLoop ShowFrame
+#include <LEDSnakeGame.h>
 
 #ifndef ESP32
 #include "stars.h" // needs too much ram for ESP32
@@ -213,6 +212,7 @@ void setup() {
   Serial.printf("There are %u patterns\n", gPatternCount);
 }
 
+bool gameRunning = false;
 void loop() {
 
   controlLoop();
@@ -226,15 +226,26 @@ void loop() {
       Serial.println(gPatterns[autopgm].name);
     }
   }
-  gPatterns[pgm].pattern();
-  ShowFrame();
+  if(webSocket.connectedClients() > 0) {
+    if(!gameRunning) {  
+      Serial.println("Game session start");
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      gameRunning = true;
+    }
+    playSnake();
+  }
+  else {
+    gameRunning = false;
+    gPatterns[pgm].pattern();
+    ShowFrame();
+  }
 }
 
 void autoRun() {
   EVERY_N_SECONDS(90) {
     autopgm = random(1, (gPatternCount - 1));
 //     autopgm++;
-    if (autopgm >= gPatternCount) autopgm = 1;
+    if (autopgm > (gPatternCount -1)) autopgm = 1;
     Serial.print("Next Auto pattern: ");
     Serial.println(gPatterns[autopgm].name);
   }

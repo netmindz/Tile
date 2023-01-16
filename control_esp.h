@@ -21,6 +21,7 @@
 #else // ESP32
 #include <WiFi.h>
 
+#include <WebSocketsServer.h>
 #include <ESPAsyncWebServer.h>
 
 #define LED_PIN 2 // Huzzah! ESP 32 values
@@ -57,7 +58,16 @@ WiFiUDP fftUdp;
 boolean udpSyncConnected;
 uint16_t audioSyncPort = 20000;
 
+WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
+
+const char index_html[] PROGMEM = R"rawliteral(
+<html>
+<body>
+<a href="/snake">Snake</a>
+</body>
+</html>
+)rawliteral";
 
 void controlSetup() {
   // Make sure you're in station mode
@@ -95,10 +105,12 @@ void controlSetup() {
   Serial.println("beginMulticast");
   fftUdp.beginMulticast(IPAddress(239, 0, 0, 1), audioSyncPort);
 
-  // Route for root / web page
+// Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", snake_html);
+    request->send_P(200, "text/html", index_html);
   });
+
+  setupSnake();
 
   // Start server
   server.begin();
