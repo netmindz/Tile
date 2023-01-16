@@ -80,6 +80,14 @@ int FADE = 50;
 int left[7];
 int right[7];
 
+void controlLoop(); // see control_* include
+void ShowFrame();
+#define ledLoop ShowFrame
+#define DELAY_DEFAULT   600 // Starting game speed (delay ms between frames)
+#define DELAY_MIN       100 // Max game speed
+#include <LEDSnakeGame.h>
+
+
 #if defined(CORE_TEENSY)
 #ifdef TEENSY4
 #include "control_null.h" // Teensy 4.0 - no input
@@ -196,6 +204,10 @@ void setup() {
 //  x2 = random16();
 //  y2 = random16();
 //  z2 = random16();
+
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+
   
   Serial.println("\n\nEnd of setup");
   Serial.printf("There are %u patterns\n", gPatternCount);

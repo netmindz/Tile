@@ -21,6 +21,8 @@
 #else // ESP32
 #include <WiFi.h>
 
+#include <ESPAsyncWebServer.h>
+
 #define LED_PIN 2 // Huzzah! ESP 32 values
 #define CLOCK_PIN 4
 
@@ -54,6 +56,8 @@ ESPAsyncE131 e131(UNIVERSE_COUNT);
 WiFiUDP fftUdp;
 boolean udpSyncConnected;
 uint16_t audioSyncPort = 20000;
+
+AsyncWebServer server(80);
 
 void controlSetup() {
   // Make sure you're in station mode
@@ -90,6 +94,14 @@ void controlSetup() {
   udpSyncConnected = true; // TODO - sometimes the wifi starts but ip is still 0.0.0.0
   Serial.println("beginMulticast");
   fftUdp.beginMulticast(IPAddress(239, 0, 0, 1), audioSyncPort);
+
+  // Route for root / web page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", snake_html);
+  });
+
+  // Start server
+  server.begin();
 
   Serial.println("End of ESP control setup");
 }
@@ -198,8 +210,8 @@ int mapNoise(int v) {
   return v;
 }
 
-
 void controlLoop() {
+  webSocket.loop();
   readDMX();
   ArduinoOTA.handle();
   readAudioUDP();
