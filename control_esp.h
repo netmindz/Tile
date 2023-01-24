@@ -23,6 +23,7 @@
 
 #include <WebSocketsServer.h>
 #include <ESPAsyncWebServer.h>
+#include <WLED-sync.h>
 
 #define LED_PIN 2 // Huzzah! ESP 32 values
 #define CLOCK_PIN 4
@@ -54,9 +55,7 @@ const char passphrase[] = SECRET_PSK;
 
 ESPAsyncE131 e131(UNIVERSE_COUNT);
 
-WiFiUDP fftUdp;
-boolean udpSyncConnected;
-uint16_t audioSyncPort = 20000;
+WLEDSync sync;
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
@@ -101,9 +100,7 @@ void controlSetup() {
 
   setupOTA();
 
-  udpSyncConnected = true; // TODO - sometimes the wifi starts but ip is still 0.0.0.0
-  Serial.println("beginMulticast");
-  fftUdp.beginMulticast(IPAddress(239, 0, 0, 1), audioSyncPort);
+  sync.begin();
 
 // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -151,14 +148,13 @@ void readDMX() {
 #include "audio.h"
 
 // FAKE MSGEQ for now
-bool newReading;
 bool MSGEQ7read() {
   return newReading;
 }
 
 int MSGEQ7get(int band) {
 //  ReadAudio();
-  return map(left[band], 0, 1023, 0, MSGEQ7_OUT_MAX);
+  return map(fftResult[map(band, 0, 7, 0, NUM_GEQ_CHANNELS)], 0, 255, 0, MSGEQ7_OUT_MAX);
 }
 
 int MSGEQ7get(int band, int channel) {
@@ -172,50 +168,6 @@ int MSGEQ16get(int band) {
 
 int MSGEQ16get(int band, int channel) {
   return MSGEQ16get(band);
-}
-
-
-// Read the UDP audio data sent by WLED-Audio
-void readAudioUDP() {
-
-  // Begin UDP Microphone Sync
-
-  // Only run the audio listener code if we're in Receive mode
-  if (millis() - lastTime > delayMs) {
-    if (udpSyncConnected) {
-      //      Serial.println("Checking for UDP Microphone Packet");
-      int packetSize = fftUdp.parsePacket();
-      if (packetSize) {
-        //        Serial.println("Received UDP Sync Packet");
-        uint8_t fftBuff[packetSize];
-        fftUdp.read(fftBuff, packetSize);
-        audioSyncPacket receivedPacket;
-        memcpy(&receivedPacket, fftBuff, packetSize);
-
-        // VERIFY THAT THIS IS A COMPATIBLE PACKET
-        char packetHeader[6];
-        memcpy(&receivedPacket, packetHeader, 6);
-        if (!(isValidUdpSyncVersion(packetHeader))) {
-          memcpy(&receivedPacket, fftBuff, packetSize);
-          
-          for (int i = 0; i < 16; i++) {
-            fftResult[i] = receivedPacket.fftResult[i];
-          }
-
-          FFT_Magnitude = receivedPacket.FFT_Magnitude;
-          FFT_MajorPeak = receivedPacket.FFT_MajorPeak;
-          // Serial.println("Finished parsing UDP Sync Packet");
-
-          // "Legacy" - for MSGEQ7 patterns
-          for (int b = 0; b < 7; b++) {
-            left[b] = map(fftResult[(b * 2)], 0, 255, 0, 1023);
-            right[b] = map(fftResult[(b * 2)], 0, 255, 0, 1023);
-          }
-        }
-      }
-    }
-  }
-
 }
 
 int mapNoise(int v) {
