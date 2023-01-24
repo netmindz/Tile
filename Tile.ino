@@ -92,14 +92,15 @@ void setupSnake(); // defined in LEDSnakeGame.h
 #include "control_esp.h" // ESP32/ESP8266 - E1.31 and audio from WLED sender
 #endif
 
-void controlLoop(); // see control_* include
-void ShowFrame();
-#define ledLoop ShowFrame
-#include <LEDSnakeGame.h>
-
 #ifndef ESP32
 #include "stars.h" // needs too much ram for ESP32
 #endif
+
+void ledLoop() {
+  ShowFrame();
+}
+
+#include <LEDSnakeGame.h>
 
 // basically beatsin16 with an additional phase
 
@@ -204,10 +205,6 @@ void setup() {
 //  y2 = random16();
 //  z2 = random16();
 
-  webSocket.begin();
-  webSocket.onEvent(webSocketEvent);
-
-  
   Serial.println("\n\nEnd of setup");
   Serial.printf("There are %u patterns\n", gPatternCount);
 }
