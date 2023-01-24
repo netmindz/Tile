@@ -1,5 +1,5 @@
 boolean audioRec = false;
-double fftResult[16];
+double fftResult[NUM_GEQ_CHANNELS];
 
 // Read the UDP audio data sent by WLED-Audio
 bool newReading;
@@ -9,7 +9,7 @@ void readAudioUDP() {
 
     audioRec = true;
 
-      for (int i = 0; i < 16; i++) {
+      for (int i = 0; i < NUM_GEQ_CHANNELS; i++) {
         fftResult[i] = sync.fftResult[i];
       }
       // Serial.println("Finished parsing UDP Sync Packet");
