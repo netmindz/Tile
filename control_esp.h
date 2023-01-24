@@ -125,7 +125,6 @@ void readDMX() {
 #include "audio.h"
 
 // FAKE MSGEQ for now
-bool newReading;
 bool MSGEQ7read() {
   return newReading;
 }

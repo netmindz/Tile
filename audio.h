@@ -2,6 +2,7 @@ boolean audioRec = false;
 double fftResult[16];
 
 // Read the UDP audio data sent by WLED-Audio
+bool newReading;
 void readAudioUDP() {
 
   if (sync.read()) {
