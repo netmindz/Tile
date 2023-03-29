@@ -60,6 +60,60 @@ uint16_t values[256];
 
 uint8_t noisesmoothing;
 
+// polar
+
+#define num_x  kMatrixWidth                       // how many LEDs are in one row?
+#define num_y  kMatrixHeight                      // how many rows?
+float polar_theta[num_x][num_y];        // look-up table for polar angles
+float distance[num_x][num_y];           // look-up table for polar distances
+
+unsigned long a, b, c;                  // for time measurements
+
+struct render_parameters {
+
+  float center_x = (num_x / 2) - 0.5;   // center of the matrix
+  float center_y = (num_y / 2) - 0.5;
+  float dist, angle;                
+  float scale_x = 0.1;                  // smaller values = zoom in
+  float scale_y = 0.1;
+  float scale_z = 0.1;       
+  float offset_x, offset_y, offset_z;     
+  float z;  
+  float low_limit  = 0;                 // getting contrast by highering the black point
+  float high_limit = 1;                                            
+};
+
+render_parameters animation;     // all animation parameters in one place
+
+#define num_oscillators 10
+
+struct oscillators {
+
+  float master_speed;            // global transition speed
+  float offset[num_oscillators]; // oscillators can be shifted by a time offset
+  float ratio[num_oscillators];  // speed ratios for the individual oscillators                                  
+};
+
+oscillators timings;             // all speed settings in one place
+
+struct modulators {  
+
+  float linear[num_oscillators];        // returns 0 to FLT_MAX
+  float radial[num_oscillators];        // returns 0 to 2*PI
+  float directional[num_oscillators];   // returns -1 to 1
+  float noise_angle[num_oscillators];   // returns 0 to 2*PI        
+};
+
+modulators move;                 // all oscillator based movers and shifters at one place
+
+struct rgb {
+
+  float red, green, blue;
+};
+
+rgb pixel;
+
+
 // everything for the button + menu handling
 int button1;
 int button2;
@@ -119,6 +173,18 @@ PatternAndNameList gPatterns = {
 #ifndef ESP32
   { showStars, "showStars"},
 #endif
+  { Yves, "Yves" },
+  { Scaledemo1, "Scaledemo1" },
+  { Lava1, "Lava1" },
+  { CaleidoP3, "CaleidoP3" },
+  { CaleidoP2, "CaleidoP2" },
+  { CaleidoP1, "CaleidoP1" },
+  { Distance_Experiment, "Distance_Experiment" },
+  { Center_Field, "Center_Field" },
+  { Waves, "Waves" },
+  { Chasing_Spirals, "Chasing_Spirals" },
+  { Rotating_Blob, "Rotating_Blob" },
+  { Rings, "Rings" },
 #ifndef TEENSY4
   { EQ, "EQ"}, 
   { VU, "VU"},
@@ -174,7 +240,7 @@ PatternAndNameList gPatterns = {
 
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 int gPatternCount = ARRAY_SIZE(gPatterns);
-int autopgm = random(1, (gPatternCount - 1));
+int autopgm = 1;// random(1, (gPatternCount - 1));
 
 void setup() {
   // enable debugging info output
@@ -187,6 +253,8 @@ void setup() {
   Serial.println("matrix_setup");
   delay(500);
   matrix_setup(false);
+
+  ledtest();
   
 //  // Initialize our noise coordinates to some random values
 //  fx = random16();
@@ -196,6 +264,10 @@ void setup() {
 //  x2 = random16();
 //  y2 = random16();
 //  z2 = random16();
+
+
+  render_polar_lookup_table((num_x / 2) - 0.5, (num_y / 2) - 0.5);          // precalculate all polar coordinates 
+                                                                            // polar origin is set to matrix centre
   
   Serial.println("\n\nEnd of setup");
   Serial.printf("There are %u patterns\n", gPatternCount);
@@ -220,8 +292,8 @@ void loop() {
 
 void autoRun() {
   EVERY_N_SECONDS(90) {
-    autopgm = random(1, (gPatternCount - 1));
-//     autopgm++;
+//    autopgm = random(1, (gPatternCount - 1));
+     autopgm++;
     if (autopgm >= gPatternCount) autopgm = 1;
     Serial.print("Next Auto pattern: ");
     Serial.println(gPatterns[autopgm].name);
